@@ -1,17 +1,20 @@
 ### **🗓️ Week 1: Foundation & Data Harvest**
 
-**Goal:** Establish the "Lungs" of the system by building the ETL pipeline for both academic and market data.
+**Goal:** Establish the "Lungs" of the system by building the ETL pipeline for both academic and market data. Data collection runs **continuously throughout the project** — model pipeline work begins once the **1,500-job threshold** is reached (~3–4 days in), not when collection is complete.
 
 * **Task 1.1: Database Setup (Supabase & pgvector):**  
   * Enable the pgvector extension to handle 384-dimensional SBERT embeddings.  
   * Execute the 3-table schema (jobs\_raw, curriculum\_tracks, skills\_library) to separate landing data from processed "Smart Data".  
   * Ensure jobs\_raw uses a JSONB column to preserve the full original response for auditing "hallucinated" skills later.  
-* **Task 1.2: Adzuna FastAPI Service:**  
-  * Implement a Python script using httpx to loop through Adzuna’s jobs/ph/search endpoint.  
-  * Target 150 jobs per keyword across the 4 tracks (e.g., "Unity Developer" for CS-GD, "Cloud Engineer" for IT-NT) to reach the 1,500+ total dataset requirement .  
-* **Task 1.3: Playwright Stealth Scrapers:**  
-  * Configure a "Headless: False" scraper for Indeed and JobStreet to handle dynamic content like "Load More" buttons.  
-  * Implement "Human-Mimicry Logic" using random delays (3–7 seconds) and wait\_for\_timeout to avoid IP bans .  
+* **Task 1.2: Adzuna FastAPI Service (Supplement):**  
+  * Run as a **one-time bulk pull** in the first 1–2 days to seed the dataset quickly.  
+  * Use 12 track-specific keywords across the 4 tracks to pull all available PH listings (~1,000–1,500 jobs expected).  
+  * Triggered automatically if JobStreet yield for a track falls below the **300-job per-track minimum**.  
+* **Task 1.3: Playwright Stealth Scraper — JobStreet (Primary):**  
+  * Configure a "Headless: False" Camoufox scraper for **JobStreet** to handle dynamic content and extract data from `__NEXT_DATA__` JSON.  
+  * Implement "Human-Mimicry Logic" using random delays (3–7 seconds), Bézier mouse curves, and adaptive backoff to avoid IP bans.  
+  * Run **3 sessions/day (~50 jobs/session = ~150 jobs/day)** continuously throughout the project.  
+  * Target: **5,000 unique job postings total** (stretch goal: 10,000). Adzuna supplements if weekly velocity falls short.
 * **Task 1.4: Curriculum PDF Parser:**  
   * Build a service to ingest PDF syllabi and extract the "Specialization" (e.g., CS-IS) and "Syllabus Text".  
   * Map the raw text into the curriculum\_tracks table for future vectorization.
@@ -43,7 +46,7 @@
 
 * **Task 3.1: Hybrid Vector Generation (SBERT \+ Node2Vec):**  
   * Generate 384-dim semantic vectors using the all-MiniLM-L6-v2 SBERT model .  
-  * Generate 64-dim structural vectors using **Node2Vec** (or GCN) based on the skill's position in the ontology graph .  
+  * Generate 64-dim structural vectors using **Node2Vec** based on the skill's position in the ontology graph.  
 * **Task 3.2: Concatenation & Storage:**  
   * Merge the two vectors into a single **448-dim Hybrid Embedding**.  
   * Upsert these into Supabase using pgvector indexed with HNSW for high-speed similarity searches .  
