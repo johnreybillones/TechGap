@@ -6,20 +6,22 @@ The system requires two distinct data streams to function. Developers must ensur
 
 ### **A. Curriculum Data**
 
-- **Source:** PDF (Syllabus/Course Outline).
+- **Source:** PDF syllabi (one per course) parsed into structured CSV files. Curriculum data is passed to the model pipeline via CSV — it is **not stored in Supabase**.
 - **Regulatory Basis:** CHED CMO No. 25, Series of 2015 — defines the minimum standards, required core courses, and outcomes for BSCS/BSIT programs.
-- **Properties to Extract:**
-  - **Specialization**: A mandatory identifier (e.g., `CS-IS`, `CS-GD`) used by the Job Family Classifier (Task 4.1) to filter the relevant job market clusters for comparison.
+- **Track-Level Fields** (one row per specialization, from curriculum map):
+  - **Track Code / Specialization**: `CS-IS`, `CS-GD`, `IT-WD`, `IT-NT` — used by the Job Family Classifier to filter the relevant job cluster.
   - **Program Type**: `BSCS` or `BSIT` — determines thesis vs. capstone requirements and applicable CHED outcomes (CS01–CS10 vs. IT01–IT10).
-  - **Course Title**: Provides hierarchical context.
-  - **Course Code**: The institutional identifier (e.g., `IT 321`, `CC104`).
-  - **Course Type**: `core`, `professional`, `elective`, or `GE` — determines how aggressively the system can suggest modifications (see Section 3.D).
-  - **CHED Protected Status**: Boolean flag for the 6 mandated common courses (CC101–CC106). The system can only suggest *additions* to protected courses, never removals.
-  - **Units**: Credit units per course — used to enforce the 146-unit minimum floor.
-  - **Hours Per Week**: Contact hours — enables time-specific suggestions like "replace 2-week VMware unit."
-  - **Syllabus Text**: The raw body used for SBERT embeddings.
-  - **Skill Keywords**: Identified technical competencies.
-  - **Course Level**: (Introductory, Intermediate, Advanced) to correlate with Bloom's Taxonomy.
+- **Course-Level Fields** (one row per course, parsed from each syllabus PDF):
+  - **Course Code**: The institutional identifier (e.g., `S-ITWB311LA`, `CC104`).
+  - **Course Title**: Display name of the course.
+  - **Course Type** *(manually assigned from curriculum map, not from syllabus)*: `core`, `professional`, `elective`, or `GE` — controls modification flexibility hierarchy.
+  - **CHED Protected Status** *(manually assigned)*: Boolean flag for CC101–CC106. The system can only suggest *additions* to protected courses, never removals.
+  - **Units**: Credit units — used to enforce the 146-unit minimum floor.
+  - **Total Hours**: Total contact hours for the semester (e.g., 48 hrs) — enables time-specific suggestions like "replace the 6-hour VMware module."
+  - **Pre-requisites / Co-requisites**: Course dependency chain — used to validate that new course suggestions don't create sequence conflicts.
+  - **Course Description**: The "COURSE DESCRIPTION" paragraph from the syllabus. Primary text for SBERT embedding.
+  - **CLOs** (variable count, typically 4–8 per course): Each Course Learning Outcome includes the outcome text and an extractable Bloom's verb (e.g., *Understand* → L2, *Analyze* → L4, *Create* → L6). These drive Bloom's distribution analysis without needing a separate "Course Level" field.
+  - **Module Topics** (variable count, typically 3–10 per course): Each module entry includes: the module title (from TLO), the *Presentation* sentence from the Teaching-Learning Activities column (which contains parenthetical sub-topic lists and specific tool/technology mentions richer than the TLO title alone), the CLO references it maps to, and hours allocated. This is the primary source for skill keyword extraction and replacement candidate identification.
 
 ### **B. Job Market Data (Industry Pulse)**
 
@@ -114,11 +116,14 @@ Every suggestion passes through 6 hard constraints before being shown to the use
 
 ## **4. Developer "Source of Truth" Checklist**
 
+- \[ \] **CSV Input Check:** Are all syllabus PDFs parsed into structured CSV files before running the pipeline? Does each course row have `course_description`, `clos` (JSON array), and `modules` (JSON array with `activity_text`) populated?
 - \[ \] **Stealth Check:** Are the Playwright scrapers using random delays to avoid IP bans?
-- \[ \] **Vector Check:** Are we storing SBERT embeddings in the pgvector column in Supabase?
+- \[ \] **Vector Check:** Are SBERT embeddings for jobs stored in `jobs_raw.description_embedding`? Are curriculum embeddings computed in-memory by the pipeline (not stored in Supabase)?
 - \[ \] **Inference Check:** Does the model understand that a "React" course doesn't need to be told it also teaches "JavaScript"?
 - \[ \] **Ranking Check:** Is the "Missing Skills" list sorted by market frequency, not alphabetically?
-- \[ \] **CHED Check:** Does the system prevent removal of CC101-CC106 content? Does it validate the 146-unit floor before suggesting new courses?
-- \[ \] **Course Anchoring Check:** Are gap skills mapped to specific courses via cosine similarity, not just listed as abstract skill names?
+- \[ \] **CHED Check:** Does the system prevent removal of CC101–CC106 content? Does it validate the 146-unit floor before suggesting new courses?
+- \[ \] **Course Anchoring Check:** Are gap skills mapped to specific anchor courses via in-memory cosine similarity (numpy), not just listed as abstract skill names?
+- \[ \] **Replace Candidate Check:** Is the replacement candidate sourced from the actual `modules` JSON (module title + hours), not inferred from embeddings?
 - \[ \] **Suggested Topics Check:** Does every skill in `skills_library` have a `suggested_topics` JSONB with 3–5 sub-topic breakdowns?
-- \[ \] **Output Check:** Does the dashboard show all 5 tiers (Alignment + Course-Anchored Gaps + Obsolescence + Job Mapping + Summary Report)?
+- \[ \] **Output Storage Check:** Are all analysis results written to the 4 output tables (`analysis_runs`, `gap_results`, `obsolescence_results`, `job_role_mappings`) after each pipeline run?
+- \[ \] **Dashboard Check:** Does the frontend fetch results from the output tables via Next.js API routes, and display all 5 tiers (Alignment + Course-Anchored Gaps + Obsolescence + Job Mapping + Summary Report)?

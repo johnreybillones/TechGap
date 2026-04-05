@@ -1,6 +1,8 @@
 # TechGap PRD — Detailed Output Specifications
 
-> This document is the **technical companion** to [PRD.md](./PRD.md). It contains the full field-level specifications, decision logic, computation methods, and example outputs for each of the 5 output tiers. Developers should reference this when implementing the FastAPI inference endpoints and the React dashboard components.
+> This document is the **technical companion** to [PRD.md](./PRD.md). It contains the full field-level specifications, decision logic, computation methods, and example outputs for each of the 5 output tiers. Developers should reference this when implementing the FastAPI inference endpoints and the Next.js dashboard components.
+>
+> **Architecture note:** Curriculum data (syllabus PDFs → structured CSV) is processed **in-memory** by the Python pipeline. Course embeddings, CLO Bloom's levels, module topic lists, and course metadata are all loaded from CSV at runtime — none of this is persisted in Supabase. Model outputs are written to 4 Supabase tables: `analysis_runs`, `gap_results`, `obsolescence_results`, `job_role_mappings`.
 
 ---
 
@@ -46,23 +48,23 @@ Each gap entry in the report includes:
 
 | Field | Source | Example |
 |---|---|---|
-| **Gap Skill Name** | `skills_library.skill_name` | Docker & Containerization |
-| **Urgency Score** | XGBRanker output (0–1) | 0.92 |
-| **Industry Demand %** | `skills_library.industry_demand_weight` × 100 | 43% of IT-NT jobs |
-| **Bloom's Level** | `skills_library.bloom_level` | L3–L4 (Applying–Analyzing) |
-| **Action Type** | Similarity threshold (see above) | MODIFY |
-| **Anchor Course** | `argmax(cosine_similarity(gap.embedding, courses.embedding))` | IT 321 — Systems Administration |
-| **Anchor Similarity** | Cosine similarity score | 0.72 |
-| **Course Type** | `curriculum_courses.course_type` | Professional |
-| **CHED Status** | `curriculum_courses.is_ched_protected` | ✅ Not protected |
-| **Topics to Add** | `skills_library.suggested_topics` | ["Dockerfile syntax", "Docker Compose", "Kubernetes basics"] |
-| **Replace Candidate** | Lowest `industry_demand_weight` topic in same course | "Desktop Virtualization (VMware)" — 8% demand |
-| **Replace Rationale** | Demand ratio: `gap_demand / replaced_demand` | Docker demand is 5.4× higher than VMware desktop |
-| **Bloom's Before/After** | `GROUP BY bloom_level` on anchor course | Before: L1(3) L2(5) L3(2) L4(0) → After: L1(3) L2(4) L3(4) L4(1) |
-| **Alignment Delta** | Re-compute alignment with gap skill virtually added | +7pp (67% → 74%) |
-| **New Job Matches** | Count of newly-matched jobs above similarity threshold | +215 postings |
-| **Program Outcomes** | `skills_library.program_outcomes` | IT03 (Design Solutions), IT07 (Modern Tools) |
-| **Alternative Courses** | 2nd and 3rd closest courses by similarity | IT 312 (0.58), IT 411 (0.41) |
+| **Gap Skill Name** | `skills_library.skill_name` (Supabase) | Docker & Containerization |
+| **Urgency Score** | XGBRanker output (0–1) — computed in pipeline | 0.92 |
+| **Industry Demand %** | `skills_library.industry_demand_weight` × 100 (Supabase) | 43% of IT-NT jobs |
+| **Bloom's Level** | `skills_library.bloom_level` (Supabase) | L3–L4 (Applying–Analyzing) |
+| **Action Type** | Cosine similarity threshold — computed in pipeline | MODIFY |
+| **Anchor Course** | `argmax(cosine_sim(gap_embedding, course_embeddings))` — in-memory numpy over courses from CSV | IT 321 — Systems Administration |
+| **Anchor Similarity** | Cosine similarity score — computed in pipeline | 0.72 |
+| **Course Type** | From CSV `course_type` column (manually assigned) | Professional |
+| **CHED Status** | From CSV `is_ched_protected` column (manually assigned) | ✅ Not protected |
+| **Topics to Add** | `skills_library.suggested_topics` (Supabase) | ["Dockerfile syntax", "Docker Compose", "Kubernetes basics"] |
+| **Replace Candidate** | Lowest-demand module from anchor course's `modules` JSON in CSV (module title + hours) | "Module 6: PHP Web Concepts & MySQL" — 6 hrs, 8% demand |
+| **Replace Rationale** | Demand ratio: `gap_demand / replaced_demand` — computed in pipeline | Docker demand is 5.4× higher |
+| **Bloom's Before/After** | Derived from CLO Bloom verbs in CSV, grouped by anchor course | Before: L1(3) L2(5) L3(2) L4(0) → After: L1(3) L2(4) L3(4) L4(1) |
+| **Alignment Delta** | Re-compute alignment with gap skill virtually added — in-memory | +7pp (67% → 74%) |
+| **New Job Matches** | Count query on `jobs_raw` above similarity threshold (Supabase) | +215 postings |
+| **Program Outcomes** | `skills_library.program_outcomes` (Supabase) | IT03 (Design Solutions), IT07 (Modern Tools) |
+| **Alternative Courses** | 2nd and 3rd highest cosine similarity — in-memory numpy | IT 312 (0.58), IT 411 (0.41) |
 
 ### **Example Outputs**
 
@@ -157,7 +159,7 @@ Identifies topics currently consuming course time that have **low or declining i
 | **CHED Status** | `is_ched_protected` | ✅ Not protected — can be replaced |
 | **Suggestion** | Template-based | "Replace jQuery unit with React fundamentals. jQuery can remain as a 1-hour historical reference." |
 
-**How it's computed:** For each `curriculum_courses.embedding`, find the nearest skill in `skills_library`. If `industry_demand_weight < 0.05` (bottom 5th percentile of all skills), flag the topic as low-demand.
+**How it's computed:** For each course in the CSV, the pipeline embeds the course description and module `activity_text` in-memory (SBERT), finds the nearest skill in `skills_library` (Supabase, pgvector), checks if `industry_demand_weight < 0.05` (bottom 5th percentile), and flags the matching module topic as low-demand. The **topic name** comes directly from the module title in the CSV (e.g., "Module 1: Introduction to PHP"), not from a nearest-skill guess.
 
 ---
 
@@ -169,13 +171,13 @@ Shows which specific job roles each course currently prepares students for, and 
 
 | Field | Computation | Example |
 |---|---|---|
-| **Current Job Roles** | Top-K similar `jobs_raw` to `course.embedding`, grouped by `job_title` | Frontend Developer (72%), Web Designer (68%) |
+| **Current Job Roles** | Course description embedded in-memory (SBERT), top-K similarity against `jobs_raw.description_embedding` (Supabase pgvector), grouped by `job_title` | Frontend Developer (72%), Web Designer (68%) |
 | **Match Percentage** | Cosine similarity averaged across job cluster | 72% |
-| **Projected Job Roles (after changes)** | Re-run top-K with modified embedding (original + gap skill averaged) | React Developer (89%) ← NEW, Full Stack Dev (64%) ← NEW |
+| **Projected Job Roles (after changes)** | Re-run top-K with modified embedding (original course + gap skill embedding averaged in-memory) | React Developer (89%) ← NEW, Full Stack Dev (64%) ← NEW |
 | **New Roles Unlocked** | Count of job titles not in current mapping | +2 categories |
 | **New Job Postings Matched** | Count of `jobs_raw` rows above similarity threshold | +340 postings |
 
-**How it's computed:** Fully deterministic — pgvector cosine similarity on `jobs_raw.description_embedding`, then SQL `GROUP BY job_title`.
+**How it's computed:** Course embeddings are computed in-memory by the Python pipeline (not stored in Supabase). The similarity search queries `jobs_raw.description_embedding` via pgvector. Results are written to `job_role_mappings` in Supabase. The frontend reads from this table — it does not re-run the similarity query.
 
 ---
 
@@ -193,7 +195,7 @@ A printable executive summary for the Academic Council — the document a dean h
 5. **CHED Compliance Summary:** Verification that all changes maintain ≥ 146 units, no protected courses were violated, all new suggestions map to at least one program outcome.
 6. **Faculty Qualification Warnings:** Any suggestions that may require faculty with new specializations (CMO §6.3).
 
-**How it's computed:** Aggregation of Tiers 1–4. All data points come from prior computations. The report is generated using Python string templates (f-strings) in the FastAPI backend — no AI API calls required.
+**How it's computed:** The FastAPI endpoint aggregates data from all 4 output tables (`analysis_runs`, `gap_results`, `obsolescence_results`, `job_role_mappings`) for a given `run_id`. The report is assembled using Python string templates (f-strings) — no AI API calls required. The Next.js frontend can render this as a printable page (`window.print()` or PDF export).
 
 ---
 

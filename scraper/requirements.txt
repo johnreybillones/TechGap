@@ -1,0 +1,9 @@
+# TechGap Scraper Dependencies
+apify-client>=1.7.0        # Apify Python SDK — runs JobStreet actor
+httpx[http2]>=0.27.0       # Async HTTP client (kept for future direct API use)
+beautifulsoup4>=4.12.0     # HTML parsing (kept for fallback extraction)
+pydantic>=2.0.0            # Data validation and schema enforcement
+pydantic-settings>=2.0.0   # .env config loading
+python-dotenv>=1.0.0       # .env file support
+supabase>=2.0.0            # Supabase Python client
+spacy>=3.7.0               # NLP for seniority/skill extraction (Week 2)
