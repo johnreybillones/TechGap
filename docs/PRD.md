@@ -25,10 +25,11 @@ The system requires two distinct data streams to function. Developers must ensur
 
 ### **B. Job Market Data (Industry Pulse)**
 
-- **Primary Source:** Playwright Scraper (JobStreet Philippines) — high-quality, structured data extracted from `__NEXT_DATA__` JSON.
-- **Supplementary Source:** Adzuna API (`jobs/ph/search`) — used as a fast-burst supplement when JobStreet yield falls below the per-track minimum, or to accelerate collection in Week 1.
+- **Primary Source:** Apify Actor (`shahidirfan/jobstreet-scraper`) — managed scraper that extracts structured JSON from JobStreet Philippines, handling Cloudflare bypass and proxy rotation automatically. ETL pipeline in `scraper/pipeline/ingest.py`.
+- **Supplementary Source:** Adzuna API (`jobs/ph/search`) — used as a fast-burst supplement when Apify/JobStreet yield falls below the per-track minimum (300 jobs), or if Apify credit is exhausted.
 - **Collection Strategy:** Data collection runs **continuously in the background** throughout the project. Model pipeline work begins once a minimum batch of **1,500 jobs** is available. Final model evaluation uses the full dataset collected by Week 4.
 - **Target:** **5,000 unique job postings** (minimum viable); 10,000 is a stretch goal.
+- **Keyword Distribution:** 20 keywords × 250 jobs per keyword = 5,000 total. IT-WD: ~1,500 • CS-IS: ~1,250 • IT-NT: ~1,250 • CS-GD: ~1,000 (high-risk track).
 - **Scope:** Philippines only, ICT/IT classification, posted within the last 6 months, English language, deduplicated by `external_id`.
 - **Properties to Extract:**
   - **Job Title**: The specific name of the role (e.g., "Full Stack Developer").
@@ -117,7 +118,7 @@ Every suggestion passes through 6 hard constraints before being shown to the use
 ## **4. Developer "Source of Truth" Checklist**
 
 - \[ \] **CSV Input Check:** Are all syllabus PDFs parsed into structured CSV files before running the pipeline? Does each course row have `course_description`, `clos` (JSON array), and `modules` (JSON array with `activity_text`) populated?
-- \[ \] **Stealth Check:** Are the Playwright scrapers using random delays to avoid IP bans?
+- \[ \] **Apify Check:** Is the Apify actor (`shahidirfan/jobstreet-scraper`) configured with the correct `APIFY_API_TOKEN`, `APIFY_COUNTRY=ph`, and 20 keywords? Did the smoke test (`--test`) return 0 errors?
 - \[ \] **Vector Check:** Are SBERT embeddings for jobs stored in `jobs_raw.description_embedding`? Are curriculum embeddings computed in-memory by the pipeline (not stored in Supabase)?
 - \[ \] **Inference Check:** Does the model understand that a "React" course doesn't need to be told it also teaches "JavaScript"?
 - \[ \] **Ranking Check:** Is the "Missing Skills" list sorted by market frequency, not alphabetically?

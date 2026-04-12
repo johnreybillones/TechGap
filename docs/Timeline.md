@@ -1,6 +1,6 @@
 ### **🗓️ Week 1: Foundation & Data Harvest**
 
-**Goal:** Establish the "Lungs" of the system by building the ETL pipeline for both academic and market data. Data collection runs **continuously throughout the project** — model pipeline work begins once the **1,500-job threshold** is reached (~3–4 days in), not when collection is complete.
+**Goal:** Establish the "Lungs" of the system. Data collection runs **continuously throughout the project** — model pipeline work begins once the **1,500-job threshold** is reached (~3–4 days in). The **Apify JobStreet actor** is the primary collection tool (Playwright/Bright Data plan deprecated April 2026).
 
 * **Task 1.1: Database Setup (Supabase & pgvector):**  
   * Enable the pgvector extension to handle 384-dimensional SBERT embeddings.  
@@ -10,11 +10,13 @@
   * Run as a **one-time bulk pull** in the first 1–2 days to seed the dataset quickly.  
   * Use 12 track-specific keywords across the 4 tracks to pull all available PH listings (~1,000–1,500 jobs expected).  
   * Triggered automatically if JobStreet yield for a track falls below the **300-job per-track minimum**.  
-* **Task 1.3: Playwright Stealth Scraper — JobStreet (Primary):**  
-  * Configure a "Headless: False" Camoufox scraper for **JobStreet** to handle dynamic content and extract data from `__NEXT_DATA__` JSON.  
-  * Implement "Human-Mimicry Logic" using random delays (3–7 seconds), Bézier mouse curves, and adaptive backoff to avoid IP bans.  
-  * Run **3 sessions/day (~50 jobs/session = ~150 jobs/day)** continuously throughout the project.  
-  * Target: **5,000 unique job postings total** (stretch goal: 10,000). Adzuna supplements if weekly velocity falls short.
+* **Task 1.3: Apify JobStreet Actor — Primary Data Collection:** ✅ *Phases 1–3 complete (April 2026)*  
+  * ~~Original plan: Playwright stealth scraper + Bright Data proxies~~ — **Replaced with Apify managed actor** (`shahidirfan/jobstreet-scraper`) due to Bright Data API access issues.  
+  * Actor natively handles JavaScript rendering, Cloudflare bypass, and proxy rotation — zero manual anti-bot configuration required.  
+  * **20 keywords** across 4 tracks, **250 jobs per keyword** = **5,000 target total**. Track breakdown: IT-WD (6 keywords ~1,500), IT-NT (5 ~1,250), CS-IS (5 ~1,250), CS-GD (4 ~1,000).  
+  * ETL pipeline (`scraper/pipeline/ingest.py`) handles field mapping, salary regex parsing, local dedup by `external_id`, and Supabase upsert with `UNIQUE(source, external_id)` constraint.  
+  * **Smoke test passed**: 20 jobs, 0 errors, 18.8s elapsed. Full-scale run (`--max 5000`) is the next step.  
+  * Cost: ~$5 Apify free credit for the full 5,000-job collection.
 * **Task 1.4: Curriculum PDF Parser:**  
   * Build a service to ingest PDF syllabi and extract the "Specialization" (e.g., CS-IS) and "Syllabus Text".  
   * Map the raw text into the curriculum\_tracks table for future vectorization.
