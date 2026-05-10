@@ -55,12 +55,12 @@ The system requires two distinct data streams to function. Developers must ensur
 
 The model doesn't just "match" words; it follows a logical sequence to determine "True Gaps."
 
-1. **Vectorization (SBERT + Node2Vec):** Converts raw text and the skill ontology graph into 448-dim "Hybrid Embeddings" (384 SBERT + 64 Node2Vec).
-2. **Clustering (K-Means):** Groups jobs into families using Title and Seniority Level metadata. A **Logistic Regression** classifier then maps each curriculum to its relevant family.
-3. **Inference Engine (Reasoning):** Uses the Skill Ontology Knowledge Graph to filter out skills logically covered by advanced topics (e.g., React covers JavaScript).
-4. **Adaptive Ranking (LambdaMART/XGBRanker):** Sorts gaps based on Market Demand, Gap Severity, and Bloom's Taxonomy Level.
-5. **Course Anchoring (Cosine Similarity):** For each ranked gap skill, computes cosine similarity against all `curriculum_courses.embedding` to identify the best existing course to absorb the gap, or determines a new course is needed (see Section 3.B.2).
-6. **CHED Constraint Validation:** Every suggestion passes through regulatory guardrails before being presented to the user (see Section 3.D).
+1. **Vectorization (SBERT `all-MiniLM-L6-v2` + Node2Vec):** Converts raw text and the skill ontology graph into 448-dim "Hybrid Embeddings" (384-dim SBERT semantic + 64-dim Node2Vec structural). SBERT uses its internal Siamese bi-encoder — no separate Siamese layer is needed.
+2. **Clustering (K-Means with K-Means++ seeding):** Groups jobs into families (K=8–12) using 448-dim Hybrid Embeddings + seniority metadata. A **Logistic Regression** classifier (softmax, L2-regularized) then maps each curriculum track to its relevant job family.
+3. **Inference Engine (Rule-Based Graph Traversal):** Traverses the Skill Ontology graph (NetworkX) to filter out "false gaps" — skills logically covered by advanced topics already in the curriculum (e.g., React → JavaScript). No external DL reasoner (e.g., Pellet) is used.
+4. **Adaptive Ranking:** v1 uses **TOPSIS** (deterministic, no training data required) to score gaps by a composite of Market Demand, Gap Severity, and Bloom's Level. **XGBRanker (LambdaMART)** replaces TOPSIS in v2 once ≥50 expert-labeled gap priority examples are available.
+5. **Course Anchoring (Cosine Similarity):** For each ranked gap skill, computes in-memory cosine similarity against all curriculum course embeddings (numpy). Threshold determines action: >0.60 → MODIFY, 0.40–0.60 → ELECTIVE, <0.40 → NEW COURSE (see Section 3.B.2).
+6. **CHED Constraint Validation:** Every suggestion passes through 6 deterministic regulatory guardrails before being presented to the user (see Section 3.D).
 
 ### **B. The Tech Stack**
 

@@ -63,17 +63,17 @@ The new pipeline moves away from a simple "Match/No-Match" binary and provides a
 
 | Component | Status | Modification |
 | :---- | :---- | :---- |
-| **SBERT Embeddings** | **Keep** | Used as the primary semantic feature. |
-| **Siamese Network** | **Modify** | Instead of being the final decision maker, its similarity score becomes just one input for the Inference Engine. |
-| **Logistic Regression** | **Repurpose** | Retained as the Job Family Classifier only. Predicts which job cluster a curriculum belongs to (upstream input to the Inference Engine). No longer used for gap detection. |
-| **Gap Detection** | **Add** | Added a **filtering step** that uses the Skill Ontology to remove redundant "false gaps." |
-| **Data Output** | **Modify** | Changed from an unsorted list of missing keywords to a **Ranked Action Plan**. |
+| **SBERT Embeddings** | **Keep** | Used as the primary semantic feature (`all-MiniLM-L6-v2`, 384-dim). SBERT already implements a Siamese bi-encoder internally. |
+| **Siamese Network** | **Replaced / Absorbed** | SBERT's bi-encoder architecture replaces the need for a separate Siamese layer. No additional Siamese network is implemented. |
+| **Logistic Regression** | **Repurpose** | Retained as the Job Family Classifier only (softmax, L2-regularized, trained on K-Means labels). Predicts which job cluster a curriculum belongs to. No longer used for gap detection. |
+| **Gap Detection** | **Add** | Rule-based subsumption traversal on the Skill Ontology graph (NetworkX) filters out "false gaps" logically covered by advanced topics. |
+| **Data Output** | **Modify** | Changed from an unsorted list of missing keywords to a **Ranked Action Plan** (TOPSIS in v1; XGBRanker in v2 with labeled data). |
 
 To integrate the **Inference Engine** and **Adaptive Ranking** tiers, your pipeline must evolve from a linear "Compare A to B" model into a multi-layered reasoning system.
 
 ### **The New TechGap Model Pipeline**
 
-The updated architecture follows a **Hybrid-Reasoning Pipeline**. It combines deep learning (SBERT/Siamese) with symbolic logic (Knowledge Graphs) and decision optimization (Learning-to-Rank).
+The updated architecture follows a **Hybrid-Reasoning Pipeline**. It combines deep learning (SBERT bi-encoder) with symbolic logic (Skill Ontology graph traversal) and decision optimization (TOPSIS in v1, LambdaMART/XGBRanker in v2).
 
 #### **Phase 1: Hybrid Feature Extraction (The "Brain" Upgrade)**
 
@@ -88,17 +88,16 @@ Instead of only using SBERT to get text vectors, you will now extract "Structura
 
 This replaces the basic "Cosine Similarity" step. It doesn't just ask "Are these words similar?" but "Does knowing X satisfy the requirement for Y?"
 
-* **Algorithms:** \* **Description Logic (DL) Reasoners (e.g., Pellet):** Performs "Subsumption Reasoning" to check if a curriculum skill is a "parent" or "child" of a required job skill.  
-  * **Euclidean/Cosine Distance:** Calculated on the *Hybrid Embeddings* from Phase 1\.  
-* **The Process:** If a student knows "Redux," the Inference Engine checks the graph, sees it is part of the "React Ecosystem," and avoids flagging a "False Gap" even if the word "React" isn't explicitly in the syllabus.
+* **Algorithm: Rule-Based Graph Traversal (NetworkX)** — The engine traverses the Skill Ontology directed graph using ancestor/descendant lookup to perform subsumption reasoning. If a curriculum skill is a parent or child of a required job skill, the gap is suppressed. No external DL reasoner (e.g., Pellet) is used — the ontology is small (~500 nodes) and Python-native traversal is sufficient, deterministic, and explainable.  
+* **The Process:** If a student knows "Redux," the Inference Engine checks the graph, sees it is part of the "React Ecosystem," and avoids flagging a "False Gap" even if the word "React" isn't explicitly in the syllabus. Cosine Distance on Hybrid Embeddings is used as a supporting signal in gap detection (Phase 5), not inside the Inference Engine itself.
 
 #### **Phase 3: Adaptive Skill Recommendation Ranking (Priority Layer)**
 
 Once gaps are identified, they are no longer just a "list." They are a prioritized action plan.
 
-* **Algorithms:**  
-  * **LambdaMART (via LightGBM) or XGBoost (XGBRanker):** A "Learning-to-Rank" (LTR) algorithm.  
-  * **TOPSIS (Multi-Criteria Decision Making):** Used to weight different factors.  
+* **Algorithms (two-phase approach):**  
+  * **v1 — TOPSIS (Technique for Order of Preference by Similarity to Ideal Solution):** Deterministic MCDM ranking. Requires no training data. Used as the baseline ranking engine from project launch. Computes a closeness coefficient (0–1) per gap based on distance to ideal/worst solutions across the three criteria.  
+  * **v2 — XGBRanker (LambdaMART via XGBoost):** Learning-to-Rank algorithm that directly optimizes NDCG. Replaces TOPSIS once ≥50 expert-labeled gap priority examples are collected from curriculum developers. Synthetic relevance labels (derived from the TOPSIS formula) are used to pre-train before expert labels arrive.  
 * **The Process:** The model takes all identified gaps and scores them based on:  
   1. **Industry Demand Weight:** How often this skill appears in current web scrapes.  
   2. **Gap Severity:** The mathematical distance between the curriculum and the industry standard.  
@@ -113,11 +112,11 @@ To move from your MAMOGGA\_Model.ipynb to this new version, follow this checklis
 | Action | Component | Specific Change |
 | :---- | :---- | :---- |
 | **ADD** | **Skill Ontology (JSON/RDF)** | Create a custom JSON graph linking related skills (e.g., FastAPI → Python). Run **Node2Vec** on this graph to produce 64-dim structural embeddings per skill. |
-| **MODIFY** | **Feature Vector** | Concatenate the 384-dim SBERT/Siamese output with the 64-dim **Node2Vec** embedding AND metadata vectors for Job Seniority Level and Curriculum Track. |
+| **MODIFY** | **Feature Vector** | Concatenate the 384-dim SBERT (`all-MiniLM-L6-v2`) output with the 64-dim **Node2Vec** embedding to form the 448-dim Hybrid Embedding. No separate Siamese layer — SBERT's bi-encoder handles this internally. |
 | **ADD** | **Bloom’s Taxonomy Scorer** | Add a Python function (or use an LLM/Keyword classifier) to assign a level (1-6) to every skill in your database. |
 | **REPLACE** | **Decision Logic** | Remove the simple LogisticRegression threshold for gaps. Replace it with a **Hybrid Score** ($S \= \\text{Similarity} \+ \\text{Inference Logic Score}$). |
 | **REMOVE** | **Flat List Output** | Stop outputting gaps alphabetically or by random order. |
-| **ADD** | **Ranking Model** | Train a small XGBRanker model using the identified gaps as items to be sorted based on "Urgency." |
+| **ADD** | **Ranking Model** | **v1:** Implement TOPSIS to rank gaps deterministically using 3 criteria: demand weight, gap severity, Bloom's level. **v2:** Train XGBRanker (LambdaMART, `objective=rank:ndcg`) once ≥50 expert-labeled examples are available. Synthetic relevance labels (from the TOPSIS composite formula, scaled 0–4) seed the XGBRanker before expert data arrives. |
 | **MODIFY** | **Data Collection** | JobStreet scraper is the primary source (~150 jobs/day, runs continuously). Adzuna API is a one-time burst supplement for Week 1 seeding and per-track fallback below 300 jobs. Scraper must collect **frequency counts** for each skill to feed the "Industry Demand Weight" for the ranking engine. Pipeline starts at 1,500 jobs; final model uses all collected data (~5,000 target). |
 
 ### **Process Flow Summary:**
@@ -125,6 +124,6 @@ To move from your MAMOGGA\_Model.ipynb to this new version, follow this checklis
 1. **Input:** Curriculum PDF (with Specialization Tag) \+ Job Post Text (with Title/Position separation).  
 2. **Vectorize:** Use **SBERT \+ Node2Vec** to get "Smart Vectors" (448-dim Hybrid Embeddings).  
 3. **Reason:** Run the **Inference Engine** to filter out skills that are logically covered by advanced topics.  
-4. **Rank:** Run the remaining "True Gaps" through **LambdaMART** to create a prioritized "Action Plan."  
+4. **Rank:** Run the remaining "True Gaps" through **TOPSIS** (v1) or **XGBRanker/LambdaMART** (v2 with expert labels) to produce a prioritized "Action Plan."  
 5. **Output:** A ranked dashboard for curriculum developers showing what to fix first.
 

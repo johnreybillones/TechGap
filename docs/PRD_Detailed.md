@@ -49,7 +49,7 @@ Each gap entry in the report includes:
 | Field | Source | Example |
 |---|---|---|
 | **Gap Skill Name** | `skills_library.skill_name` (Supabase) | Docker & Containerization |
-| **Urgency Score** | XGBRanker output (0–1) — computed in pipeline | 0.92 |
+| **Urgency Score** | **v1:** TOPSIS closeness coefficient (0–1, deterministic) — computed in pipeline. **v2:** XGBRanker output (0–1) once ≥50 expert-labeled examples are available | 0.92 |
 | **Industry Demand %** | `skills_library.industry_demand_weight` × 100 (Supabase) | 43% of IT-NT jobs |
 | **Bloom's Level** | `skills_library.bloom_level` (Supabase) | L3–L4 (Applying–Analyzing) |
 | **Action Type** | Cosine similarity threshold — computed in pipeline | MODIFY |
