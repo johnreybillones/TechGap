@@ -1,133 +1,35 @@
 {
   "version": 1,
   "skills": {
-    "supabase-postgres-best-practices": {
-      "source": ".agents/skills/supabase-postgres-best-practices",
-      "sourceType": "local",
-      "description": "Project-specific Supabase Postgres optimization patterns"
-    },
-
-    "superpowers:using-superpowers": {
-      "source": "~/.claude/skills/superpowers/using-superpowers",
-      "sourceType": "global",
-      "description": "Bootstrap — skill discovery and invocation protocol. Invoke at session start."
-    },
-    "superpowers:brainstorming": {
-      "source": "~/.claude/skills/superpowers/brainstorming",
-      "sourceType": "global",
-      "description": "Design before implementation — clarify intent, propose approaches, write spec."
-    },
-    "superpowers:writing-plans": {
-      "source": "~/.claude/skills/superpowers/writing-plans",
-      "sourceType": "global",
-      "description": "Create bite-sized TDD implementation plans saved to docs/superpowers/plans/."
-    },
-    "superpowers:subagent-driven-development": {
-      "source": "~/.claude/skills/superpowers/subagent-driven-development",
-      "sourceType": "global",
-      "description": "Execute plans via fresh subagents with two-stage review per task."
-    },
-    "superpowers:executing-plans": {
-      "source": "~/.claude/skills/superpowers/executing-plans",
-      "sourceType": "global",
-      "description": "Inline plan execution with checkpoints when subagents are unavailable."
-    },
-    "superpowers:dispatching-parallel-agents": {
-      "source": "~/.claude/skills/superpowers/dispatching-parallel-agents",
-      "sourceType": "global",
-      "description": "Dispatch one agent per independent problem domain concurrently."
-    },
-    "superpowers:requesting-code-review": {
-      "source": "~/.claude/skills/superpowers/requesting-code-review",
-      "sourceType": "global",
-      "description": "Dispatch code reviewer subagent with git SHAs after each task or feature."
-    },
-    "superpowers:receiving-code-review": {
-      "source": "~/.claude/skills/superpowers/receiving-code-review",
-      "sourceType": "global",
-      "description": "Handle incoming code review feedback with technical rigor before implementing."
-    },
-    "superpowers:systematic-debugging": {
-      "source": "~/.claude/skills/superpowers/systematic-debugging",
-      "sourceType": "global",
-      "description": "Root cause investigation before any fix. Four-phase debugging protocol."
-    },
-    "superpowers:test-driven-development": {
-      "source": "~/.claude/skills/superpowers/test-driven-development",
-      "sourceType": "global",
-      "description": "RED-GREEN-REFACTOR cycle. Write failing test before any implementation code."
-    },
-    "superpowers:verification-before-completion": {
-      "source": "~/.claude/skills/superpowers/verification-before-completion",
-      "sourceType": "global",
-      "description": "Evidence before claims — run verification commands before any completion statement."
-    },
-    "superpowers:finishing-a-development-branch": {
-      "source": "~/.claude/skills/superpowers/finishing-a-development-branch",
-      "sourceType": "global",
-      "description": "Verify tests, detect environment, present merge/PR/keep/discard options."
-    },
-    "superpowers:using-git-worktrees": {
-      "source": "~/.claude/skills/superpowers/using-git-worktrees",
-      "sourceType": "global",
-      "description": "Isolated workspace via git worktrees before feature work or plan execution."
-    },
-    "superpowers:writing-skills": {
-      "source": "~/.claude/skills/superpowers/writing-skills",
-      "sourceType": "global",
-      "description": "TDD-based skill authoring — RED (baseline) → GREEN (write) → REFACTOR (bulletproof)."
-    },
-
     "context7-mcp": {
       "source": "~/.claude/skills/context7-mcp",
       "sourceType": "global",
       "description": "Fetch live library/framework documentation via Context7 MCP instead of training data."
-    },
-
-    "ecc:coding-standards": {
-      "source": "~/.claude/skills/ecc/coding-standards",
-      "sourceType": "global",
-      "description": "Cross-project coding conventions — naming, readability, immutability, code quality."
-    },
-    "ecc:backend-patterns": {
-      "source": "~/.claude/skills/ecc/backend-patterns",
-      "sourceType": "global",
-      "description": "API design, database optimization, server-side patterns for Node.js, Express, Next.js."
-    },
-    "ecc:frontend-patterns": {
-      "source": "~/.claude/skills/ecc/frontend-patterns",
-      "sourceType": "global",
-      "description": "React, Next.js, state management, performance optimization, UI best practices."
     },
     "ecc:api-design": {
       "source": "~/.claude/skills/ecc/api-design",
       "sourceType": "global",
       "description": "REST API design — resources, status codes, pagination, error responses, versioning."
     },
-    "ecc:postgres-patterns": {
-      "source": "~/.claude/skills/ecc/postgres-patterns",
+    "ecc:backend-patterns": {
+      "source": "~/.claude/skills/ecc/backend-patterns",
       "sourceType": "global",
-      "description": "PostgreSQL query optimization, schema design, indexing, and security (Supabase)."
+      "description": "API design, database optimization, server-side patterns for Node.js, Express, Next.js."
+    },
+    "ecc:coding-standards": {
+      "source": "~/.claude/skills/ecc/coding-standards",
+      "sourceType": "global",
+      "description": "Cross-project coding conventions — naming, readability, immutability, code quality."
+    },
+    "ecc:continuous-learning-v2": {
+      "source": "~/.claude/skills/ecc/continuous-learning-v2",
+      "sourceType": "global",
+      "description": "Instinct-based learning with confidence scoring — extract patterns into reusable skills."
     },
     "ecc:database-migrations": {
       "source": "~/.claude/skills/ecc/database-migrations",
       "sourceType": "global",
       "description": "Schema changes, data migrations, rollbacks, zero-downtime for Prisma/Drizzle/Django."
-    },
-    "ecc:security-review": {
-      "source": "~/.claude/skills/ecc/security-review",
-      "sourceType": "global",
-      "description": "Security checklist for auth, user input, secrets, API endpoints, payment features."
-    },
-    "ecc:tdd-workflow": {
-      "source": "~/.claude/skills/ecc/tdd-workflow",
-      "sourceType": "global",
-      "description": "TDD with 80%+ coverage — unit, integration, and E2E tests."
-    },
-    "ecc:verification-loop": {
-      "source": "~/.claude/skills/ecc/verification-loop",
-      "sourceType": "global",
-      "description": "Continuous verification system — checkpoint and eval patterns."
     },
     "ecc:deployment-patterns": {
       "source": "~/.claude/skills/ecc/deployment-patterns",
@@ -144,21 +46,121 @@
       "sourceType": "global",
       "description": "Playwright E2E — Page Object Model, configuration, CI/CD integration, flaky tests."
     },
-    "ecc:search-first": {
-      "source": "~/.claude/skills/ecc/search-first",
+    "ecc:frontend-patterns": {
+      "source": "~/.claude/skills/ecc/frontend-patterns",
       "sourceType": "global",
-      "description": "Research existing tools and libraries before writing custom code."
+      "description": "React, Next.js, state management, performance optimization, UI best practices."
     },
     "ecc:iterative-retrieval": {
       "source": "~/.claude/skills/ecc/iterative-retrieval",
       "sourceType": "global",
       "description": "Progressive context refinement to solve the subagent context problem."
     },
-    "ecc:continuous-learning-v2": {
-      "source": "~/.claude/skills/ecc/continuous-learning-v2",
+    "ecc:postgres-patterns": {
+      "source": "~/.claude/skills/ecc/postgres-patterns",
       "sourceType": "global",
-      "description": "Instinct-based learning with confidence scoring — extract patterns into reusable skills."
+      "description": "PostgreSQL query optimization, schema design, indexing, and security (Supabase)."
+    },
+    "ecc:search-first": {
+      "source": "~/.claude/skills/ecc/search-first",
+      "sourceType": "global",
+      "description": "Research existing tools and libraries before writing custom code."
+    },
+    "ecc:security-review": {
+      "source": "~/.claude/skills/ecc/security-review",
+      "sourceType": "global",
+      "description": "Security checklist for auth, user input, secrets, API endpoints, payment features."
+    },
+    "ecc:tdd-workflow": {
+      "source": "~/.claude/skills/ecc/tdd-workflow",
+      "sourceType": "global",
+      "description": "TDD with 80%+ coverage — unit, integration, and E2E tests."
+    },
+    "ecc:verification-loop": {
+      "source": "~/.claude/skills/ecc/verification-loop",
+      "sourceType": "global",
+      "description": "Continuous verification system — checkpoint and eval patterns."
+    },
+    "mermaid-diagrams": {
+      "source": "softaworks/agent-toolkit",
+      "sourceType": "github",
+      "skillPath": "skills/mermaid-diagrams/SKILL.md",
+      "computedHash": "b6c206a3cab0333a1d3d3cf27114099d0d5f25eb07d86c8f12472b7aa7d59a4c"
+    },
+    "supabase-postgres-best-practices": {
+      "source": ".agents/skills/supabase-postgres-best-practices",
+      "sourceType": "local",
+      "description": "Project-specific Supabase Postgres optimization patterns"
+    },
+    "superpowers:brainstorming": {
+      "source": "~/.claude/skills/superpowers/brainstorming",
+      "sourceType": "global",
+      "description": "Design before implementation — clarify intent, propose approaches, write spec."
+    },
+    "superpowers:dispatching-parallel-agents": {
+      "source": "~/.claude/skills/superpowers/dispatching-parallel-agents",
+      "sourceType": "global",
+      "description": "Dispatch one agent per independent problem domain concurrently."
+    },
+    "superpowers:executing-plans": {
+      "source": "~/.claude/skills/superpowers/executing-plans",
+      "sourceType": "global",
+      "description": "Inline plan execution with checkpoints when subagents are unavailable."
+    },
+    "superpowers:finishing-a-development-branch": {
+      "source": "~/.claude/skills/superpowers/finishing-a-development-branch",
+      "sourceType": "global",
+      "description": "Verify tests, detect environment, present merge/PR/keep/discard options."
+    },
+    "superpowers:receiving-code-review": {
+      "source": "~/.claude/skills/superpowers/receiving-code-review",
+      "sourceType": "global",
+      "description": "Handle incoming code review feedback with technical rigor before implementing."
+    },
+    "superpowers:requesting-code-review": {
+      "source": "~/.claude/skills/superpowers/requesting-code-review",
+      "sourceType": "global",
+      "description": "Dispatch code reviewer subagent with git SHAs after each task or feature."
+    },
+    "superpowers:subagent-driven-development": {
+      "source": "~/.claude/skills/superpowers/subagent-driven-development",
+      "sourceType": "global",
+      "description": "Execute plans via fresh subagents with two-stage review per task."
+    },
+    "superpowers:systematic-debugging": {
+      "source": "~/.claude/skills/superpowers/systematic-debugging",
+      "sourceType": "global",
+      "description": "Root cause investigation before any fix. Four-phase debugging protocol."
+    },
+    "superpowers:test-driven-development": {
+      "source": "~/.claude/skills/superpowers/test-driven-development",
+      "sourceType": "global",
+      "description": "RED-GREEN-REFACTOR cycle. Write failing test before any implementation code."
+    },
+    "superpowers:using-git-worktrees": {
+      "source": "~/.claude/skills/superpowers/using-git-worktrees",
+      "sourceType": "global",
+      "description": "Isolated workspace via git worktrees before feature work or plan execution."
+    },
+    "superpowers:using-superpowers": {
+      "source": "~/.claude/skills/superpowers/using-superpowers",
+      "sourceType": "global",
+      "description": "Bootstrap — skill discovery and invocation protocol. Invoke at session start."
+    },
+    "superpowers:verification-before-completion": {
+      "source": "~/.claude/skills/superpowers/verification-before-completion",
+      "sourceType": "global",
+      "description": "Evidence before claims — run verification commands before any completion statement."
+    },
+    "superpowers:writing-plans": {
+      "source": "~/.claude/skills/superpowers/writing-plans",
+      "sourceType": "global",
+      "description": "Create bite-sized TDD implementation plans saved to docs/superpowers/plans/."
+    },
+    "superpowers:writing-skills": {
+      "source": "~/.claude/skills/superpowers/writing-skills",
+      "sourceType": "global",
+      "description": "TDD-based skill authoring — RED (baseline) → GREEN (write) → REFACTOR (bulletproof)."
     }
   }
 }
-

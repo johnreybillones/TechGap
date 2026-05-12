@@ -1,8 +1,108 @@
 # TechGap PRD — Detailed Output Specifications
 
-> This document is the **technical companion** to [PRD.md](./PRD.md). It contains the full field-level specifications, decision logic, computation methods, and example outputs for each of the 5 output tiers. Developers should reference this when implementing the FastAPI inference endpoints and the Next.js dashboard components.
+> This document is the **technical companion** to [PRD.md](./PRD.md). It contains field-level specifications, decision logic, computation methods, and example outputs for the student and admin/faculty v1 surfaces. Developers should reference this when implementing the FastAPI inference endpoints and the Next.js dashboard components.
 >
 > **Architecture note:** Curriculum data (syllabus PDFs → structured CSV) is processed **in-memory** by the Python pipeline. Course embeddings, CLO Bloom's levels, module topic lists, and course metadata are all loaded from CSV at runtime — none of this is persisted in Supabase. Model outputs are written to 4 Supabase tables: `analysis_runs`, `gap_results`, `obsolescence_results`, `job_role_mappings`.
+
+---
+
+## **Student Surface**
+
+### **Student State Model**
+
+Student state is browser-local, stored in versioned `localStorage`, and reset by explicit Reset action or intentional role switch.
+
+| Field | Type | Notes |
+|---|---|---|
+| `program` | `CS` \| `IT` | Required |
+| `year_level` | `1st` \| `2nd` \| `3rd` \| `4th` \| `Irregular` | Required |
+| `mastered_course_codes` | `string[]` | Completed or confidently mastered courses |
+| `selected_career_role_id` | `string \| null` | Selected role target from the top 5 suggestions or another scraped-job-backed career option |
+
+### **Student Endpoints**
+
+| Frontend Route | Method | Response Focus |
+|---|---|---|
+| `/api/student/courses` | `GET` | Program/year-filtered course catalog |
+| `/api/student/career-suggestions` | `POST` | Top 5 career-role suggestions plus eligible scraped-job-backed alternatives |
+| `/api/student/analyze` | `POST` | Personal alignment score and gap categories |
+| `/api/student/roadmap` | `POST` | Ordered roadmap nodes |
+| `/api/resources` | `GET` | Cached trusted resources for one skill |
+
+### **Student Output 1 — Personal Alignment Analysis**
+
+**What it shows:**
+
+- **Alignment Score:** Cosine similarity between the student's weighted mastered-course profile and the selected career-role demand profile.
+- **Alignment Band:** Strong (`>= 75%`), Moderate (`50% to < 75%`), or Weak (`< 50%`).
+- **Role Summary:** Selected role name, whether it came from the top 5 suggestions or the alternate career option list, matched job-cluster context, and evidence confidence.
+
+**How it's computed:**
+
+- Build a weighted student profile vector from mastered courses using units/contact hours and Bloom depth.
+- Compare that vector to the selected role demand profile using cosine similarity. If the selected role is outside the top 5, it must first resolve to a career option backed by scraped job postings.
+- Convert the result to a percentage and map it to the display band.
+
+### **Student Output 2 — Personal Skill Gap Report**
+
+**What it shows per skill:**
+
+| Field | Source / Computation | Example |
+|---|---|---|
+| **Skill Name** | Curated role demand profile + `skills_library` | Docker |
+| **Category** | Similarity thresholds plus inference override | Partial |
+| **Demand Weight** | Job-derived role demand profile | 0.41 |
+| **Evidence Note** | Similarity and ontology reasoning | "Covered indirectly via DevOps tooling" |
+| **Future Course Coverage** | Matching later curriculum course(s) | IT 421 |
+
+**Category rules:**
+
+| Category | Rule |
+|---|---|
+| **Present** | similarity `>= 0.60` |
+| **Partial** | similarity `>= 0.40` and `< 0.60` |
+| **Missing** | similarity `< 0.40` |
+| **Future Curriculum Coverage** | Not yet mastered, but taught later in the student's curriculum |
+
+If ontology reasoning shows a parent or child skill already covered, the skill may be promoted from `Missing` to `Partial` or `Present`.
+
+### **Student Output 3 — Skill Roadmap**
+
+**What it shows per node:**
+
+| Field | Source / Computation | Example |
+|---|---|---|
+| **Skill ID / Name** | `skills_library` | `docker` / Docker |
+| **Priority Score** | Deterministic urgency score | 0.82 |
+| **Category** | Missing / Partial / Future Coverage | Missing |
+| **Prerequisite Skills** | Ontology or curated dependency map | Linux fundamentals |
+| **Demand Weight** | Role demand profile | 0.41 |
+| **Estimated Bloom Level** | Skill metadata | L3 |
+
+**How it's computed:**
+
+- Start from the ranked student gaps.
+- Order by urgency score.
+- Reorder only when prerequisite relationships require a dependency-first sequence.
+
+### **Student Output 4 — Learning Resources**
+
+**What it shows per resource:**
+
+| Field | Source / Computation | Example |
+|---|---|---|
+| **Title** | Cached catalog metadata | Docker Overview |
+| **URL** | Allowlisted trusted source | `https://developer.mozilla.org/...` |
+| **Source Name** | Domain/source label | MDN |
+| **Tags** | Skill and level metadata | Docker, beginner |
+| **Access** | Free / accessible indicator | Free |
+| **Freshness** | Cached metadata timestamp | Refreshed 2026-05-12 |
+
+**Resource rules:**
+
+- Only allowlisted trusted sources are eligible.
+- The student sees cached results immediately.
+- Background refresh updates metadata only in v1; it does not auto-discover open-web links.
 
 ---
 

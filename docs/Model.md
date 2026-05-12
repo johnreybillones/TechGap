@@ -20,7 +20,7 @@ The model now requires a multi-dimensional input set to feed the logical reasoni
 * **Required Skills List:** Extracted keywords from job postings.  
 * **Industry Demand Frequency:** How often a specific skill appears across scraped jobs (a key feature for the Ranking Engine).  
 * **Salary:** Contextual metadata for the Philippines market (salary\_min, salary\_max).  
-* **Source:** Primarily `jobstreet` (Playwright scraper, ongoing background collection). `adzuna` supplements with a one-time burst pull in Week 1 to seed the dataset.  
+* **Source:** Primarily `jobstreet` via the Apify managed actor (`shahidirfan/jobstreet-scraper`) with ongoing background collection. `adzuna` supplements with a one-time burst pull in Week 1 to seed the dataset.  
 * **Collection Strategy:** Data collection is **not a blocking step**. The model pipeline begins once 1,500 jobs are available, while the scraper continues running in the background. Target: **5,000 unique job postings** (stretch: 10,000).
 
 #### **C. Knowledge & Framework Data (The "Intelligence")**
@@ -126,4 +126,3 @@ To move from your MAMOGGA\_Model.ipynb to this new version, follow this checklis
 3. **Reason:** Run the **Inference Engine** to filter out skills that are logically covered by advanced topics.  
 4. **Rank:** Run the remaining "True Gaps" through **TOPSIS** (v1) or **XGBRanker/LambdaMART** (v2 with expert labels) to produce a prioritized "Action Plan."  
 5. **Output:** A ranked dashboard for curriculum developers showing what to fix first.
-

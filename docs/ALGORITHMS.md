@@ -301,6 +301,139 @@ These thresholds are **empirically derived defaults** and should be calibrated a
 
 ---
 
+## Student Profile Vector
+
+### Algorithm Used: Weighted Course Embedding Aggregation
+
+**What it does:** Builds a single student-profile vector from the set of mastered courses selected in the student flow.
+
+**Why it was chosen:**
+- Uses the same hybrid embedding space as the curriculum and job pipeline
+- Remains deterministic and explainable
+- Lets stronger courses contribute more than lightweight survey courses
+
+**How it works:**
+1. Load the hybrid embedding for each mastered course
+2. Assign each course a weight using normalized units or contact hours plus normalized Bloom depth
+3. Compute the weighted average embedding
+4. Normalize the resulting student-profile vector for comparison
+
+**Output:** A single student vector used for career-role suggestion and personal alignment analysis.
+
+---
+
+## Student Career-Role Suggestion
+
+### Algorithm Used: Weighted Cosine Similarity Ranking
+
+**What it does:** Ranks career roles for a student based on their mastered-course profile and the current job-market demand profile for each role. The top 5 are shown as recommendations, but the student may choose another career option when that option is backed by scraped job evidence.
+
+**Why it was chosen:**
+- Stable role labels are easier for students to understand than raw scraped job titles
+- Curated roles avoid noisy cluster naming
+- Supports open cross-program discovery without breaking curriculum filtering
+- Keeps alternate career choices bounded to roles or job-title groups present in the scraped jobs dataset
+
+**How it works:**
+1. Build the student-profile vector
+2. Build the eligible career-option pool from curated roles and scraped-job-backed role or job-title groups
+3. Compare the student-profile vector against each eligible role demand profile using cosine similarity
+4. Combine:
+   - role similarity
+   - role demand weight
+   - evidence confidence from supporting job clusters
+5. Sort descending and return the top 5 recommended roles
+6. If the student chooses another career outside the top 5, validate that the chosen option exists in the eligible scraped-job-backed pool before analysis
+7. If evidence is sparse, return low-confidence suggestions rather than no output
+
+**Conclusion:** This is sufficient for v1 and avoids adding another learned ranking model for the student flow.
+
+---
+
+## Personal Gap Classification
+
+### Algorithm Used: Threshold-Based Similarity Classification with Ontology Override
+
+**What it does:** Classifies each role-required competency in the student analysis as `Present`, `Partial`, `Missing`, or `Future Curriculum Coverage`.
+
+**Why it was chosen:**
+- Threshold rules are simple to explain to students and faculty
+- The ontology override reduces false negatives
+- It keeps future-course coverage separate from true absence
+
+**Thresholds:**
+- `Present`: similarity `>= 0.60`
+- `Partial`: similarity `>= 0.40` and `< 0.60`
+- `Missing`: similarity `< 0.40`
+- `Future Curriculum Coverage`: the skill is taught later in the student's curriculum but is not yet mastered
+
+**Override rule:**
+- If a parent or child skill is already covered according to the ontology, a skill may be upgraded from `Missing` to `Partial` or `Present`.
+
+---
+
+## Student Roadmap Sequencing
+
+### Algorithm Used: Priority Ranking + Prerequisite-Constrained Ordering
+
+**What it does:** Converts ranked student gaps into an ordered roadmap that respects both urgency and dependency structure.
+
+**Why it was chosen:**
+- Pure priority sort ignores prerequisites
+- Pure graph ordering ignores demand urgency
+- Combining both keeps the roadmap actionable
+
+**How it works:**
+1. Start with the student's ranked gaps
+2. Use TOPSIS urgency score or equivalent deterministic rank as the primary priority signal
+3. Build prerequisite edges from the ontology or curated dependency map
+4. Apply topological ordering to enforce prerequisite-first sequencing
+5. Where multiple nodes are available at the same stage, sort by higher urgency first
+
+**Conclusion:** This gives a roadmap-like structure without introducing a separate planning model.
+
+---
+
+## Learning Resource Ranking
+
+### Algorithm Used: Allowlist Filtering + Metadata Scoring
+
+**What it does:** Filters and ranks resources for a roadmap node using cached metadata instead of live open-web retrieval at click time.
+
+**Why it was chosen:**
+- Fast node expansion in the student UI
+- Better trust and moderation control
+- Background metadata refresh preserves enough dynamism for v1
+
+**How it works:**
+1. Restrict eligible resources to allowlisted trusted domains
+2. Filter by target skill and level tags
+3. Score by relevance, accessibility, freshness, and availability
+4. Return cached results immediately
+5. Refresh only metadata in the background for v1
+
+---
+
+## Admin Top 5 Job Ranking
+
+### Algorithm Used: Similarity-Demand-Evidence Composite Score
+
+**What it does:** Ranks the top jobs shown to admin/faculty users for a selected curriculum track.
+
+**Why it was chosen:**
+- Demand-only ranking can surface irrelevant jobs
+- Similarity-only ranking can surface niche roles with weak market support
+- Evidence thresholds improve trust in role cards
+
+**How it works:**
+1. Compute curriculum-to-job similarity
+2. Combine it with posting frequency or demand weight
+3. Apply evidence confidence from deduplicated supporting postings
+4. Require at least 3 deduplicated postings for normal-confidence display
+5. Sort descending and return the top 5 jobs
+
+---
+
 ## Bloom's Taxonomy Scorer
 
 ### Algorithm Used: Keyword Classifier (Verb Extraction from CLOs)
@@ -356,6 +489,13 @@ These thresholds are **empirically derived defaults** and should be calibrated a
 | CHED Compliance | Deterministic Rule Engine | ✅ Non-negotiable | No ML — always deterministic |
 
 ---
+
+| Student Profile Vector | Weighted course embedding aggregation | âœ… Deterministic and explainable | Transcript-grade weighting if data exists |
+| Career-Role Suggestion | Weighted cosine similarity ranking | âœ… Stable top 5 ranking with scraped-job-backed alternate options | Learned reranker if labeled student outcomes exist |
+| Personal Gap Classification | Threshold similarity + ontology override | âœ… Simple and explainable | Threshold calibration with real usage |
+| Roadmap Sequencing | Priority + prerequisite ordering | âœ… Good v1 roadmap logic | Richer dependency graph if needed |
+| Resource Ranking | Allowlist filtering + metadata scoring | âœ… Fast cached retrieval | Controlled source discovery later |
+| Admin Top 5 Jobs | Similarity-demand-evidence composite | âœ… Better than demand-only or similarity-only | Tune weights after usage review |
 
 ## Key Architectural Decisions & Rationale
 

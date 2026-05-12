@@ -1,5 +1,26 @@
 # TechGap PRD
 
+## **0. v1 Experience Model**
+
+TechGap v1 has two role-based experiences behind a shared no-auth entry point:
+
+- **Student flow** - personal curriculum-to-career guidance using program/year selection, mastered-course selection, top 5 career-role suggestions, an alternate scraped-job-backed career option when needed, personal alignment analysis, skill gap reporting, roadmap generation, and cached learning resources.
+- **Admin/Faculty flow** - curriculum-track analysis using top jobs, job evidence review, alignment dashboard metrics, gap and obsolescence reporting, and printable curriculum reports.
+
+### **A. Entry, Routes, and Persistence**
+
+- **Entry Route:** `/`
+- **Student Route:** `/student`
+- **Admin Route:** `/admin`
+- **Auth/RBAC:** Deferred for v1
+- **Student Persistence:** Browser `localStorage` only. Student choices are stored locally and reset when the user clicks Reset or intentionally switches role.
+
+### **B. Frontend-to-Backend Boundary**
+
+- **Frontend-facing API:** Next.js `/api/*`
+- **Backend analysis API:** FastAPI `/v1/*`
+- **Purpose:** Next.js remains the browser-facing proxy layer so backend topology, credentials, and future auth/caching concerns stay hidden from the client.
+
 ## **1. Input Specifications (The Data Foundation)**
 
 The system requires two distinct data streams to function. Developers must ensure these properties are present and validated before they hit the model.
@@ -64,23 +85,38 @@ The model doesn't just "match" words; it follows a logical sequence to determine
 
 ### **B. The Tech Stack**
 
-- **Frontend (Next.js + TypeScript + Tailwind):** Handles file uploads, progress bars for scrapers, and the interactive gap dashboard. Uses the App Router with `"use client"` on dashboard pages. API routes (`/api/*`) proxy calls to FastAPI to avoid exposing backend credentials on the client.
-- **Backend (FastAPI):** Orchestrates the ETL pipeline, runs the Python-based ML models, executes the course-anchoring computation, and generates CHED-validated suggestion reports.
+- **Frontend (Next.js + TypeScript + Tailwind):** Handles the Choose Role entry, student wizard, student analysis views, admin dashboard/report views, and browser-local student persistence. Uses the App Router with `"use client"` on interactive pages. API routes (`/api/*`) proxy calls to FastAPI so backend credentials and service topology stay off the client.
+- **Backend (FastAPI):** Orchestrates the ETL pipeline, runs the Python-based ML models, serves role-based analysis endpoints, executes course anchoring, and generates CHED-validated reports.
 - **Database (Supabase + pgvector):** Stores raw jobs, curriculum metadata, skill ontology, and the mathematical vectors for high-speed similarity searches. Free tier (500 MB) is sufficient for 5K–10K jobs.
 
 ---
 
 ## **3. Output Specifications (The User Dashboard)**
 
-The dashboard translates ML results into **actionable curriculum decisions**. Outputs are structured in 5 tiers, from high-level overview to detailed revision instructions. All computations are deterministic (cosine similarity, SQL aggregation, threshold rules) — no AI API calls required.
+TechGap v1 has two output surfaces. All computations remain deterministic (cosine similarity, SQL aggregation, TOPSIS, threshold rules) - no AI API calls are required at inference time.
+
+### **A. Student Outputs**
+
+The student flow returns:
+
+- **Personal Alignment Score** - similarity between the student's weighted mastered-course profile and the selected career-role demand profile. The selected role may come from the top 5 suggestions or from another scraped-job-backed career option.
+- **Personal Skill Gap Report** - competencies grouped into `Present`, `Partial`, `Missing`, and `Future Curriculum Coverage`.
+- **Skill Roadmap** - sequenced roadmap nodes ordered by urgency plus prerequisite structure.
+- **Learning Resources** - cached trusted resources loaded only when a roadmap node is opened.
+
+### **B. Admin / Faculty Outputs**
+
+The admin/faculty flow returns 5 tiers of curriculum-analysis output, from high-level overview to detailed revision instructions.
+
+These admin outputs translate ML results into **actionable curriculum decisions** across 5 tiers, from high-level overview to detailed revision instructions.
 
 > 📄 **For field-level specs, decision logic tables, and example outputs, see [PRD_Detailed.md](./PRD_Detailed.md).**
 
-### **A. Tier 1 — Track-Level Alignment Dashboard**
+### **C. Tier 1 — Track-Level Alignment Dashboard**
 
 A health check per specialization track showing: alignment score (%), skill coverage breakdown (matched/inferred/missing), Bloom's depth distribution (L1–L6), and the top 3 gap skills with demand percentages.
 
-### **B. Tier 2 — Course-Anchored Gap Report** *(Core Output)*
+### **D. Tier 2 — Course-Anchored Gap Report** *(Core Output)*
 
 For each ranked gap skill, the system determines an **action type** based on cosine similarity to existing courses:
 
@@ -90,19 +126,19 @@ For each ranked gap skill, the system determines an **action type** based on cos
 
 Each gap entry includes: urgency score, industry demand %, anchor course, specific topics to add (from `suggested_topics`), replacement candidates with demand ratios, Bloom's before/after projection, alignment delta, new job matches, and CHED program outcomes mapped.
 
-### **C. Tier 3 — Obsolescence Detection**
+### **E. Tier 3 — Obsolescence Detection**
 
 Flags topics with industry demand below the 5th percentile and suggests higher-demand replacements within the same skill category. Each entry shows the current vs. replacement demand ratio and CHED protection status.
 
-### **D. Tier 4 — Course-to-Job Role Mapping**
+### **F. Tier 4 — Course-to-Job Role Mapping**
 
 Maps each course to the job roles it currently prepares students for (via cosine similarity to `jobs_raw`), then projects which **new roles become accessible** after implementing suggested changes. Shows before/after job title counts.
 
-### **E. Tier 5 — Curriculum Revision Summary Report**
+### **G. Tier 5 — Curriculum Revision Summary Report**
 
 A printable executive summary for the Academic Council containing: current alignment state, priority-sorted recommended changes, projected post-revision alignment, obsolescence report, CHED compliance verification (146-unit floor, protected courses, outcome mapping), and faculty qualification warnings.
 
-### **F. CHED Compliance Guardrails**
+### **H. CHED Compliance Guardrails**
 
 Every suggestion passes through 6 hard constraints before being shown to the user:
 
@@ -128,3 +164,5 @@ Every suggestion passes through 6 hard constraints before being shown to the use
 - \[ \] **Suggested Topics Check:** Does every skill in `skills_library` have a `suggested_topics` JSONB with 3–5 sub-topic breakdowns?
 - \[ \] **Output Storage Check:** Are all analysis results written to the 4 output tables (`analysis_runs`, `gap_results`, `obsolescence_results`, `job_role_mappings`) after each pipeline run?
 - \[ \] **Dashboard Check:** Does the frontend fetch results from the output tables via Next.js API routes, and display all 5 tiers (Alignment + Course-Anchored Gaps + Obsolescence + Job Mapping + Summary Report)?
+- \[ \] **Student Flow Check:** Does the frontend persist student program/year/mastered-course/role choices in browser `localStorage`, restore them safely, allow role selection from either the top 5 suggestions or scraped-job-backed alternatives, and clear them on Reset or intentional role switch?
+- \[ \] **Role Routing Check:** Does `/` route users cleanly into `/student` or `/admin`, with role-specific API traffic going through Next.js `/api/*` proxy routes?
