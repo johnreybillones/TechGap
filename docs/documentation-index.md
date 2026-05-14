@@ -17,6 +17,7 @@ The repository is in migration Pass 1.
 - [product/product-documents.md](./product/product-documents.md): product requirements, output specs, and use cases
 - [architecture/architecture-documents.md](./architecture/architecture-documents.md): system design, pipeline, algorithms, and ADRs
 - [implementation/implementation-documents.md](./implementation/implementation-documents.md): status, timeline, and implementation plans
+- [frontend/README.md](./frontend/README.md): frontend design, flows, page specs, component contracts, API/state contracts, and testing plan
 - [reference/reference-documents.md](./reference/reference-documents.md): external or source-reference material
 - [archive/archive-policy.md](./archive/archive-policy.md): retired or superseded documentation
 
@@ -36,6 +37,14 @@ The repository is in migration Pass 1.
   - [subtasks/1.1 Supabase Environment Setup.md](./subtasks/1.1%20Supabase%20Environment%20Setup.md)
   - [subtasks/1.2 Adzuna FastAPI Service Implementation.md](./subtasks/1.2%20Adzuna%20FastAPI%20Service%20Implementation.md)
   - [subtasks/1.3 Scraping_Implementation_Plan.md](./subtasks/1.3%20Scraping_Implementation_Plan.md)
+- Frontend:
+  - [frontend/README.md](./frontend/README.md)
+  - [frontend/DESIGN.md](./frontend/DESIGN.md)
+  - [frontend/ROUTES_AND_FLOWS.md](./frontend/ROUTES_AND_FLOWS.md)
+  - [frontend/PAGE_SPECS.md](./frontend/PAGE_SPECS.md)
+  - [frontend/COMPONENTS.md](./frontend/COMPONENTS.md)
+  - [frontend/API_AND_STATE.md](./frontend/API_AND_STATE.md)
+  - [frontend/TESTING.md](./frontend/TESTING.md)
 - Regulatory and reference:
   - [CHED Memo.md](./CHED%20Memo.md)
   - [SAMPLE_ALGORITHMS_FORMAL.md](./SAMPLE_ALGORITHMS_FORMAL.md)
