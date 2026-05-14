@@ -24,6 +24,33 @@ Each mastered course contributes to the profile, but not every course contribute
 
 For example, a major programming course with deeper application or creation outcomes should usually affect the profile more than a short introductory course.
 
+The formula starts with the course weight:
+
+```text
+Course Weight = alpha(ui) + beta(bi)
+```
+
+Here:
+
+- `ui` is the normalized units or load weight of course `i`
+- `bi` is the normalized Bloom-depth weight of course `i`
+- `alpha` and `beta` are balancing coefficients
+
+This means the system gives each course a weight based on both course size and learning depth.
+
+After that, the full student profile is built as a weighted average:
+
+```text
+Student Profile = (sum of wi * hi) / (sum of wi)
+```
+
+Here:
+
+- `wi` is the computed weight of course `i`
+- `hi` is the hybrid embedding of course `i`
+
+In simple terms, the system combines all mastered-course vectors into one final student vector, but stronger courses influence the result more.
+
 The output is one student profile vector. This vector represents what the student currently appears to know based on their mastered-course selections.
 
 ## Career-Role Suggestion Score
@@ -34,6 +61,21 @@ The system compares the student's profile against each eligible career-role dema
 
 The score can also consider market demand and evidence strength. A role with many supporting job postings and clear extracted skills is more reliable than a role with weak or sparse evidence.
 
+The formula is:
+
+```text
+Career Role Score = gamma(sj) + delta(dj) + epsilon(ej)
+```
+
+Here:
+
+- `sj` is the similarity between the student's profile and role `j`
+- `dj` is the normalized demand weight of role `j`
+- `ej` is the normalized evidence confidence of role `j`
+- `gamma`, `delta`, and `epsilon` are balancing coefficients
+
+This means a role ranks higher when it is a strong student match, appears strongly in labor-market demand, and has enough supporting job evidence.
+
 The output is the ranked list of suggested career roles, usually shown as the student's top 5 recommendations.
 
 ## Personal Alignment Score
@@ -41,6 +83,20 @@ The output is the ranked list of suggested career roles, usually shown as the st
 `Personal Alignment Score` measures how close the student's current profile is to the selected career role.
 
 A higher score means the student's mastered courses are more aligned with the role's required skills. A lower score means the student has more distance to cover before the role is well supported by their current academic evidence.
+
+The formula is:
+
+```text
+Personal Alignment Score = cos(p, qrole) * 100%
+```
+
+Here:
+
+- `p` is the normalized student profile vector
+- `qrole` is the normalized demand profile of the selected role
+- `cos(...)` means cosine similarity
+
+This means the system measures how close the two vectors point in the same direction, then converts that similarity into a percentage for display.
 
 This score is personalized. Two students in the same program can receive different alignment scores because they may select different mastered courses, have different year levels, or target different career roles.
 
@@ -68,6 +124,15 @@ A skill receives higher priority when it is important to the selected career rol
 
 The score prevents the roadmap from becoming a random list of missing skills. It helps the system focus on the gaps that matter most for the student's selected path.
 
+In practice, this score comes from the urgency ranking used by the student roadmap. The exact formula can follow a deterministic ranking method such as TOPSIS, where each gap is scored using factors like demand, severity, and learning depth.
+
+In simple terms, a roadmap item gets a higher priority score when:
+
+- employers ask for it often
+- the student is still far from that skill
+- the skill matters strongly for the chosen role
+- the skill should be learned before later skills
+
 ## Student Roadmap Sequencing
 
 `Student Roadmap Sequencing` turns the student's priority gaps into an ordered learning path.
@@ -75,6 +140,20 @@ The score prevents the roadmap from becoming a random list of missing skills. It
 The roadmap does not simply sort every missing skill by urgency. It also checks prerequisite order. Foundational skills should appear before skills that depend on them.
 
 For example, a roadmap should usually place JavaScript fundamentals before React, and networking basics before advanced network security.
+
+The selection rule is:
+
+```text
+Next Roadmap Node = argmax g in At of u(g)
+```
+
+Here:
+
+- `At` is the set of skills currently available to learn because their prerequisites are already satisfied
+- `u(g)` is the urgency score of skill `g`
+- `argmax` means the system picks the available skill with the highest urgency score
+
+This means the roadmap chooses the most important next skill from the set of skills the student is actually ready to study.
 
 The output is a sequence of roadmap nodes that balances urgency with learning order.
 
